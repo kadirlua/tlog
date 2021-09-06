@@ -1,0 +1,7 @@
+﻿  tlogger.cpp
+C:\Users\Lenovo\source\repos\tlogger\tlogger\Logger.h(225,22): warning C4244: 'initializing': conversion from 'std::streamoff' to 'int', possible loss of data
+C:\Users\Lenovo\source\repos\tlogger\tlogger\Logger.h(222): message : while compiling class template member function 'int aricanli::general::Logger<wchar_t>::fileLength(std::basic_ofstream<wchar_t,std::char_traits<wchar_t>> &)'
+C:\Users\Lenovo\source\repos\tlogger\tlogger\Logger.h(243): message : see reference to function template instantiation 'int aricanli::general::Logger<wchar_t>::fileLength(std::basic_ofstream<wchar_t,std::char_traits<wchar_t>> &)' being compiled
+C:\Users\Lenovo\source\repos\tlogger\tlogger\tlogger.cpp(15): message : see reference to class template instantiation 'aricanli::general::Logger<wchar_t>' being compiled
+C:\Users\Lenovo\source\repos\tlogger\tlogger\Formatter.h(74): warning C4715: 'aricanli::general::Formatter<wchar_t>::formatHash': not all control paths return a value
+  tlogger.vcxproj -> C:\Users\Lenovo\source\repos\tlogger\Debug\tlogger.exe

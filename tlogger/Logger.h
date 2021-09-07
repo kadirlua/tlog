@@ -22,10 +22,12 @@
 	- test setter functions
 	- Add Format support
 	- Improve comments. Especially Classes and  enum classes
+	- Fix character encoding
 
 	Add :
-	- Limit file size.
-	- Fix Formatter::formatHash() for character encoding
+	- Improve Limit file size
+	- Fix Formatter::formatXML() & formatJSON() functions
+	
 	Test :
 	- Macro definitions
 	Attention :
@@ -85,7 +87,10 @@ namespace aricanli {
 			Logger& operator=(const Logger&) noexcept = delete;
 			Logger(Logger&&) noexcept = default;
 			Logger& operator=(Logger&&) noexcept = default;
-			virtual ~Logger() noexcept = default;
+			virtual ~Logger() noexcept {
+				m_ofs.close();
+			}
+		
 
 			static std::shared_ptr<Logger> getInstance() {
 				/**
@@ -115,8 +120,16 @@ namespace aricanli {
 				std::lock_guard<std::mutex> _lock(m_mutex);
 				m_fileName = t_fileName;
 				m_ExtensionName = t_extName;
-				m_logPath = t_fileName + L"." + t_extName;
+				 
+				m_logPath = t_fileName + stringlit(T, ".")  + t_extName;  // char , wchar_t
 			}
+
+			//static std::basic_string<T> L(std::string val) {
+			//	if constexpr(std::is_same_v<T, char>)
+			//		return val;
+			//	if constexpr (std::is_same_v<T, wchar_t>)
+			//		return TOWSTRING((val));
+			//}
 
 			static void setLogPriority(LogPriority t_logPriority) {
 				/*
@@ -173,14 +186,22 @@ namespace aricanli {
 				}
 			}
 
-			static void setFormatter(const std::basic_string<T>& t_fmt = "%t %m") {
+			static void setFormatter(const std::basic_string<T>& t_fmt , formatPattern t_fmtPattern = formatPattern::Plain) {
 				/*
 				* Get format type and pass to Formatter::getFormatter() function
 				* default as %t %m
 				*/
 				std::lock_guard<std::mutex> _lock(m_mutex);
-				fmt.getFormatter(t_fmt);
-				fmt.split(' ');
+				fmt.getFormatter(t_fmt, t_fmtPattern);
+			}
+
+			static void setFileLimit(int t_fileLimit) {
+				/*
+				* Set file's limit 
+				* default as %t %m
+				*/
+				std::lock_guard<std::mutex> _lock(m_mutex);
+				m_maxFileSize = t_fileLimit;
 			}
 		protected:
 			Logger() noexcept
@@ -237,22 +258,28 @@ namespace aricanli {
 				*/
 
 				auto formattedStr = fmt.format(line, funcName, std::forward<Args>(args)...);
-
+				formattedStr += '\n';
 				if (m_logOutput == LogOutput::File) {
 					m_ofs << formattedStr.c_str();
-					if (fileLength(m_ofs) > 310 * 1024 * 1024) {
+					
+					if (fileLength(m_ofs) > m_maxFileSize * 1024 * 1024) {
 						m_ofs.close();
-						auto t_path = m_fileName + L"1." + m_ExtensionName;
+						static int iter = 1;
+						std::basic_ostringstream<T> oss;
+						oss << iter;						
+						std::basic_string<T> t_path = m_fileName + oss.str() + stringlit(T, ".") + m_ExtensionName;
 						m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
+						iter++;
 					}
 				}
 				if (m_logOutput == LogOutput::Console)
-					StreamWrapper<T>::tout << formattedStr.c_str();
+					StreamWrapper<T>::tout << formattedStr.c_str() ;
 			}
 
 		protected:
 			static std::mutex m_mutex;
 			static Formatter<T> fmt;
+			static int m_maxFileSize;
 			static std::basic_string<T> m_fileName;
 			static std::basic_string<T> m_ExtensionName;
 			static std::basic_ofstream<T> m_ofs;
@@ -300,6 +327,8 @@ namespace aricanli {
 		std::mutex Logger<T>::m_mutex;
 		template<typename T>
 		std::basic_ofstream<T> Logger<T>::m_ofs;
+		template<typename T>
+		int Logger<T>::m_maxFileSize = 512;
 		template<typename T>
 		LogPriority Logger<T>::m_logPriority = LogPriority::Debug;
 		template<typename T>

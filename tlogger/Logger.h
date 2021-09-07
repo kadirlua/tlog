@@ -4,7 +4,6 @@
 #include <string>
 #include <memory>
 #include <fstream>
-#include <type_traits>
 #include "Formatter.h"
 #if __cplusplus >= 201703L
 #include <string_view>
@@ -25,11 +24,11 @@
 	- Fix character encoding
 
 	Add :
-	- Improve Limit file size
-	- Fix Formatter::formatXML() & formatJSON() functions
-	
+	- Add C++17 filesystem for limit the size of file 
+
 	Test :
 	- Macro definitions
+	
 	Attention :
 	- Attention to keywords. virtual  noexcept , override etc.
 	- Try shared_lock for C++17 & C++20
@@ -77,8 +76,7 @@ namespace aricanli {
 		//	Logger<wchar_t>::setLogPriority(LogPriority::Debug);
 		//	auto log = Logger<wchar_t>::getInstance();
 		//	log->setFormatter(L"%f %l %m %t");
-		//	log->log(LogPriority::Error, __LINE__, _T(__FILE__), L"tellus felis condimentum odio, : ", 1, 'A', L" porta tincidunt lectus turpis id sem. Integer et est neque.", L"Vestibulum at maximus ante. ");
-
+		//	log->log(LogPriority::Error, __LINE__, _T(__FILE__), L"tellus felis condimentum odio, : ", 1, );
 		template <typename T = char>
 		class Logger {
 		public:
@@ -88,6 +86,7 @@ namespace aricanli {
 			Logger(Logger&&) noexcept = default;
 			Logger& operator=(Logger&&) noexcept = default;
 			virtual ~Logger() noexcept {
+				std::lock_guard<std::mutex> _lock(m_mutex);
 				m_ofs.close();
 			}
 		
@@ -100,15 +99,6 @@ namespace aricanli {
 				if (loggerInstance == nullptr)
 					loggerInstance = std::shared_ptr<Logger<T>>(new Logger<T>{  });
 				return loggerInstance;
-			}
-
-			static void setLogOutput(LogOutput t_logOutput) {
-				/*
-				* Set log output as Logoutput enum class
-				* @param t_logOutput: enum class LogOutput
-				*/
-				std::lock_guard<std::mutex> _lock(m_mutex);
-				m_logOutput = t_logOutput;
 			}
 
 			static void setLogOutput(std::basic_string<T> t_fileName, std::basic_string<T> t_extName) {
@@ -124,14 +114,7 @@ namespace aricanli {
 				m_logPath = t_fileName + stringlit(T, ".")  + t_extName;  // char , wchar_t
 			}
 
-			//static std::basic_string<T> L(std::string val) {
-			//	if constexpr(std::is_same_v<T, char>)
-			//		return val;
-			//	if constexpr (std::is_same_v<T, wchar_t>)
-			//		return TOWSTRING((val));
-			//}
-
-			static void setLogPriority(LogPriority t_logPriority) {
+			static void setLogPriority(LogPriority t_logPriority) noexcept {
 				/*
 				* Set log priority level
 				* @param t_logPriority: enum class LogPriority
@@ -186,22 +169,22 @@ namespace aricanli {
 				}
 			}
 
-			static void setFormatter(const std::basic_string<T>& t_fmt , formatPattern t_fmtPattern = formatPattern::Plain) {
+			static void setFormatter(const std::basic_string<T>& t_fmt) noexcept {
 				/*
 				* Get format type and pass to Formatter::getFormatter() function
 				* default as %t %m
 				*/
 				std::lock_guard<std::mutex> _lock(m_mutex);
-				fmt.getFormatter(t_fmt, t_fmtPattern);
+				fmt.getFormatter(t_fmt);
 			}
 
-			static void setFileLimit(int t_fileLimit) {
+			static void setFileLimit(int t_fileLimit) noexcept {
 				/*
 				* Set file's limit 
 				* default as %t %m
 				*/
 				std::lock_guard<std::mutex> _lock(m_mutex);
-				m_maxFileSize = t_fileLimit;
+				m_maxFileSize = t_fileLimit * 1048576; // 1024 * 1024 = * 1048576
 			}
 		protected:
 			Logger() noexcept
@@ -240,14 +223,14 @@ namespace aricanli {
 				m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
 			}
 #endif
-			static int fileLength(std::basic_ofstream<T>& t_ofs) {
+			static constexpr int fileLength(std::basic_ofstream<T>& t_ofs) {
 
 				t_ofs.seekp(0, t_ofs.end);
 				int t_fileLength = t_ofs.tellp();
 				t_ofs.seekp(0, t_ofs.beg);
 				return t_fileLength;
-
 			}
+
 			template <typename ...Args>
 			static void LogMessage(int line, const std::basic_string<T> funcName, Args &&...args) {
 				/*
@@ -262,7 +245,7 @@ namespace aricanli {
 				if (m_logOutput == LogOutput::File) {
 					m_ofs << formattedStr.c_str();
 					
-					if (fileLength(m_ofs) > m_maxFileSize * 1024 * 1024) {
+					if (fileLength(m_ofs) > m_maxFileSize ) { // 1024 * 1024 = 1048576
 						m_ofs.close();
 						static int iter = 1;
 						std::basic_ostringstream<T> oss;
@@ -279,7 +262,7 @@ namespace aricanli {
 		protected:
 			static std::mutex m_mutex;
 			static Formatter<T> fmt;
-			static int m_maxFileSize;
+			static unsigned int m_maxFileSize;
 			static std::basic_string<T> m_fileName;
 			static std::basic_string<T> m_ExtensionName;
 			static std::basic_ofstream<T> m_ofs;
@@ -328,7 +311,7 @@ namespace aricanli {
 		template<typename T>
 		std::basic_ofstream<T> Logger<T>::m_ofs;
 		template<typename T>
-		int Logger<T>::m_maxFileSize = 512;
+		unsigned int Logger<T>::m_maxFileSize = 536870912; // 512 MB
 		template<typename T>
 		LogPriority Logger<T>::m_logPriority = LogPriority::Debug;
 		template<typename T>

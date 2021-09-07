@@ -1,21 +1,23 @@
 #include <iostream>
-#include <thread>
-#include <memory>
 #include "Logger.h"
 
 using namespace aricanli::general;
 
-#define WLOG_TEST 1
+#define WLOG_TEST 0
 
 
 int main() {
 
+	//aricanli::general::Formatter<wchar_t> fd;
+	//fd.getFormatter(L"MESSAGE:%m\tTIME:%t\tLINE:%l\tFUNC:%f",formatPattern::XML);
+	//auto ret = fd.format(__LINE__,_T(__FILE__) , L"berker", L"boyaci", L"123");
+	//std::wcout << ret << "\n";
 #if WLOG_TEST
-
+	// Usage Samples
 	Logger<wchar_t>::setLogOutput(L"log", L"txt");
 	Logger<wchar_t>::setLogPriority(LogPriority::Debug);
 	auto log = Logger<wchar_t>::getInstance();
-	log->setFormatter(L"%m %t %l %f");
+	log->setFormatter(L"MESSAGE:%m\tLINE:%l\tTIME:%t\tFUNC:%f");
 
 	auto start1 = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < 100'000; i++)
@@ -54,30 +56,32 @@ int main() {
 #else 
 	/* Create log ->*/
 
-	Logger<char>::setLogOutput("log.txt");
+	Logger<char>::setLogOutput("log","txt");
 	Logger<char>::setLogPriority(LogPriority::Debug);
 	auto log = Logger<char>::getInstance();
+	log->setFormatter("%m %l %t %f"); 
+	log->setFileLimit(100);
 
 	auto start1 = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < 100'000; i++)
-		log->log(LogPriority::Error, __LINE__, "tellus felis condimentum odio, : ", 1, 'A', "porta tincidunt lectus turpis id sem. Integer et est neque.", "Vestibulum at maximus ante. ");
+		log->log(LogPriority::Error, __LINE__, __FILE__, "tellus felis condimentum odio, : ", 1, 'A', "porta tincidunt lectus turpis id sem. Integer et est neque.", "Vestibulum at maximus ante. ");
 	auto finish1 = std::chrono::high_resolution_clock::now();
 	auto start2 = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < 100'000; i++)
-		log->log(LogPriority::Warning, __LINE__, "Nunc a varius purus. : ", 3.14159, "Proin dictum erat sit amet posuere tristique. ", "Fusce a arcu rhoncus, ");
+		log->log(LogPriority::Warning, __LINE__, __FILE__, "Nunc a varius purus. : ", 3.14159, "Proin dictum erat sit amet posuere tristique. ", "Fusce a arcu rhoncus, ");
 	auto finish2 = std::chrono::high_resolution_clock::now();
 	auto start3 = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < 100'000; i++)
-		log->log(LogPriority::Info, __LINE__, " mattis dolor id,  : ", " vestibulum nibh.", "Nulla in auctor leo. ");
+		log->log(LogPriority::Info, __LINE__, __FILE__, " mattis dolor id,  : ", " vestibulum nibh.", "Nulla in auctor leo. ");
 	auto finish3 = std::chrono::high_resolution_clock::now();
 
 	auto start5 = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < 100'000; i++)
-		log->log(LogPriority::Warning, __LINE__, "Nunc a varius purus. : ", 3.14159, "Proin dictum erat sit amet posuere tristique. ", "Fusce a arcu rhoncus, ");
+		log->log(LogPriority::Warning, __LINE__, __FILE__, "Nunc a varius purus. : ", 3.14159, "Proin dictum erat sit amet posuere tristique. ", "Fusce a arcu rhoncus, ");
 	auto finish5 = std::chrono::high_resolution_clock::now();
 	auto start6 = std::chrono::high_resolution_clock::now();
 	for (int i = 0; i < 100'000; i++)
-		log->log(LogPriority::Info, __LINE__, " mattis dolor id,  : ", 2.712, 'a', " vestibulum nibh.", "Nulla in auctor leo. ");
+		log->log(LogPriority::Info, __LINE__, __FILE__, " mattis dolor id,  : ", 2.712, 'a', " vestibulum nibh.", "Nulla in auctor leo. ");
 	auto finish6 = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> elapsed1 = finish1 - start1;
 	std::chrono::duration<double> elapsed2 = finish2 - start2;

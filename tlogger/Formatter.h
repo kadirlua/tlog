@@ -67,6 +67,63 @@ namespace aricanli {
 				m_fmt = fmt;
 			}
 
+
+			template<typename ...Args>
+			static std::basic_string<T> format( Args &&...args) {
+				/*
+				* Format given arguments with defined parameters and return as basic_string<T>
+				* @param line : __LINE__ macro
+				* @param func : __FILE__ macro
+				* @param ...args: Variadic template arguments
+				*/
+
+				std::basic_string<T> t_format = m_fmt;
+
+				// Message ->
+				size_t foundMsg = t_format.find(stringlit(T, "%m")); // char , wchar_t
+				if (foundMsg != std::string::npos) {
+					std::basic_ostringstream<T> oss;
+					using unused = int[];
+
+					(void)unused {
+						0, (oss << args << " ", 0)...
+					};
+					t_format = findAndReplace(std::move(t_format), stringlit(T, "%m"), oss.str()); // char , wchar_t
+				}
+
+
+				// Time ->
+				size_t foundTime = t_format.find(stringlit(T, "%t")); // char , wchar_t
+				if (foundTime != std::string::npos) {
+
+					std::basic_ostringstream<T> oss;
+#if __cplusplus >= 201703L
+					if constexpr (std::is_same_v<T, char>) {
+						oss << timePointAsString(std::chrono::system_clock::now()).c_str() << " ";
+					}
+#else
+					if (std::is_same_v<T, char>) {
+						oss << timePointAsString(std::chrono::system_clock::now()).c_str() << " ";
+					}
+#endif			
+
+
+#if __cplusplus >= 201703L
+					if constexpr (std::is_same_v<T, wchar_t>) {
+						oss << timePointAsWString(std::chrono::system_clock::now()).c_str() << " ";
+					}
+#else
+					if (std::is_same_v<T, wchar_t>) {
+						oss << timePointAsWString(std::chrono::system_clock::now()).c_str() << " ";
+					}
+#endif	
+
+					t_format = findAndReplace(std::move(t_format), stringlit(T, "%t"), oss.str()); // char , wchar_t
+				}
+
+				return t_format;
+			}
+
 			template<typename ...Args>
 			static std::basic_string<T> format(int line, const std::basic_string<T>& func, Args &&...args) {
 				/*

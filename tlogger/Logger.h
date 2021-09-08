@@ -4,12 +4,19 @@
 #include <string>
 #include <memory>
 #include <fstream>
+#include <locale>
+#include <codecvt>
 #include "Formatter.h"
 #if __cplusplus >= 201703L
 #include <string_view>
 #include <filesystem>
 #else
-#include <filesystem>
+#if defined _MSC_VER
+	#include <direct.h>
+#elif defined __GNUC__
+	#include <sys/types.h>
+	#include <sys/stat.h>
+#endif
 #endif
 
 
@@ -26,6 +33,7 @@
 	- Fix character encoding
 	- limit unsigned int to unsigned long long
 	- Add C++17 filesystem for limit the size of file
+	- add UTF8 support
 
 	Add :
 	- add C++14 file mkdir
@@ -34,18 +42,13 @@
 	- Macro definitions
 	
 	Attention :
-	- changelog -> sürüm geçmiþi (release note)
+	- changelog -> (release note)
 	- Attention to keywords. virtual  noexcept , override etc.
 	- Try shared_lock for C++17 & C++20
 */
 
 namespace aricanli {
 	namespace general {
-
-
-#if __cplusplus >= 201703L
-		namespace fs = std::filesystem;
-#endif
 
 		// LogPriority enum class
 		// Possible priority levels
@@ -91,7 +94,6 @@ namespace aricanli {
 		template <typename T = char>
 		class Logger {
 		public:
-
 			Logger(const Logger&) noexcept = delete;
 			Logger& operator=(const Logger&) noexcept = delete;
 			Logger(Logger&&) noexcept = default;
@@ -111,17 +113,14 @@ namespace aricanli {
 				return loggerInstance;
 			}
 
-			static void setLogOutput(std::basic_string<T> t_fileName, std::basic_string<T> t_extName) {
+			static void setLogOutput(std::basic_string<T> t_filePath) {
 				/*
 				* Set log path as std::basic_string
 				* @param t_fileName : file name
 				* @param t_extName : extension name
 				*/
-				std::lock_guard<std::mutex> _lock(m_mutex);
-				m_fileName = t_fileName;
-				m_ExtensionName = t_extName;
-				 
-				m_logPath = t_fileName + stringlit(T, ".")  + t_extName;  // char , wchar_t
+				std::lock_guard<std::mutex> _lock(m_mutex);		 
+				m_logPath = t_filePath;  
 			}
 
 			static void setLogPriority(LogPriority t_logPriority) {
@@ -133,6 +132,53 @@ namespace aricanli {
 				m_logPriority = t_logPriority;
 			}
 
+			static void log(LogPriority messageLevel){} // For Quiet priority 
+
+			template<typename ...Args>
+			static void log(LogPriority messageLevel, Args &&...args) {
+				/*
+				* Log given message with defined parameters and pass LogMessage() function
+				* @param messageLevel: Log Level
+				* @param line : __LINE__ macro
+				* @param funcName : __FILE__ macro
+				* @param ...args: Variadic template arguments
+				*/
+				std::lock_guard<std::mutex> _lock(m_mutex);
+				if (messageLevel <= m_logPriority) {
+					switch (messageLevel) {
+					case LogPriority::Quiet:
+						break;
+					case LogPriority::Fatal:
+						LogMessage( "FATAL:", std::forward<Args>(args)...);
+
+						break;
+					case LogPriority::Error:
+						LogMessage( "ERROR:", std::forward<Args>(args)...);
+
+						break;
+					case LogPriority::Warning:
+						LogMessage( "WARNING:", std::forward<Args>(args)...);
+
+						break;
+					case LogPriority::Info:
+						LogMessage( "INFO:", std::forward<Args>(args)...);
+
+						break;
+					case LogPriority::Verbose:
+						LogMessage( "VERBOSE:", std::forward<Args>(args)...);
+
+						break;
+					case LogPriority::Debug:
+						LogMessage( "DEBUG:", std::forward<Args>(args)...);
+
+						break;
+					case  LogPriority::Trace:
+						LogMessage( "TRACE:", std::forward<Args>(args)...);
+
+						break;
+					}
+				}
+			}
 
 			template<typename ...Args>
 			static void log(LogPriority messageLevel, int line, const std::basic_string<T> funcName, Args &&...args) {
@@ -220,8 +266,8 @@ namespace aricanli {
 				setLogFormat();
 			}
 
-
-			static void openFile(fs::path t_path) {
+#if __cplusplus >= 201703L
+			static void openFile(std::filesystem::path t_path) {
 				/*
 				* Open file in ofstream out or append mode
 				* @param t_path : filesystem::path
@@ -229,30 +275,79 @@ namespace aricanli {
 				std::lock_guard<std::mutex> _lock(m_mutex);
 				try {
 					auto t_root = t_path.parent_path();
-					if (!fs::exists(t_path)) {
-						fs::create_directories(t_root.string());
+					if (!std::filesystem::exists(t_path)) {
+						std::filesystem::create_directories(t_root.string());
 					}
+					m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t, 0x10ffff, std::generate_header>));
 					m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
+
+					//std::locale utf8_locale(std::locale(), new utf8cvt<false>);
+
+
+					m_ofs.seekp(0, std::ios_base::end);
 				}
-				catch (const fs::filesystem_error& ex) {
+				catch (const std::filesystem::filesystem_error& ex) {
 					std::cout << ex.what() << "\n";
 				}
 				catch (...) {
 					std::cout << "Unknown error in Logger::openFile()\n";
-				}			
+				}
+			}
+#else
+			static void openFile(const std::basic_string<T>& t_path) {
+				/*
+				* Open file in ofstream out or append mode
+				* @param t_path : filesystem::path
+				*/
+				std::lock_guard<std::mutex> _lock(m_mutex);
+
+
+				// Create directory 
+#if defined _MSC_VER
+				_mkdir(t_path);
+#elif defined __GNUC__
+				mkdir(t_path, 0777);
+#endif
+
+				m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
+			}
+#endif
+
+
+			template <typename ...Args>
+			static void LogMessage( Args &&...args) {
+				/*
+				* Pass argumants to set Formatter::format() and take back as formatted string
+				* and write the string to choosen stream in constructor
+				* @param logPriority: Log priority
+				* @param ...args: Variadic template arguments
+				*/
+
+				auto formattedStr = fmt.format(std::forward<Args>(args)...);
+
+				formattedStr += '\n';
+				if (m_logOutput == LogOutput::File) {
+					if ((static_cast<unsigned long long>(m_ofs.tellp()) + formattedStr.length()) >= m_maxFileSize) {
+						m_ofs.close();
+						static int iter = 1;
+						std::basic_ostringstream<T> oss;
+						oss << iter;
+
+						const size_t pos = m_logPath.find_last_of('.');
+						if (pos != std::string::npos) {
+							std::basic_string<T> t_pathName = m_logPath.substr(0, pos);
+							std::basic_string<T> t_extName = m_logPath.substr(pos + 1);
+							t_pathName += oss.str() + stringlit(T, ".") + t_extName;
+							m_ofs.open(t_pathName, std::ofstream::out | std::ofstream::app);
+						}
+						iter++;
+					}
+					m_ofs << formattedStr.c_str();
+				}
+				if (m_logOutput == LogOutput::Console)
+					StreamWrapper<T>::tout << formattedStr.c_str();
 			}
 
-			static constexpr size_t fileLength(std::basic_ofstream<T>& t_ofs) {
-				/*
-				* return size of file as integer
-				* @param t_ofs : basic_ofstream<T>
-				* @return t_fileLength : int
-				*/
-				t_ofs.seekp(0, t_ofs.end);
-				size_t t_fileLength = t_ofs.tellp();
-				t_ofs.seekp(0, t_ofs.beg);
-				return t_fileLength;
-			}
 
 			template <typename ...Args>
 			static void LogMessage(int line, const std::basic_string<T> funcName, Args &&...args) {
@@ -267,13 +362,19 @@ namespace aricanli {
 				
 				formattedStr += '\n';
 				if (m_logOutput == LogOutput::File ) {
-					if ( (fileLength(m_ofs) + formattedStr.length()) >= m_maxFileSize ) {
+					if ( (static_cast<unsigned long long>(m_ofs.tellp()) + formattedStr.length()) >= m_maxFileSize ) {
 						m_ofs.close();
 						static int iter = 1;
 						std::basic_ostringstream<T> oss;
-						oss << iter;						
-						std::basic_string<T> t_path = m_fileName + oss.str() + stringlit(T, ".") + m_ExtensionName;
-						m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
+						oss << iter;
+
+						const size_t pos = m_logPath.find_last_of('.');
+						if (pos != std::string::npos) {
+							std::basic_string<T> t_pathName = m_logPath.substr(0, pos);
+							std::basic_string<T> t_extName = m_logPath.substr(pos + 1);
+							t_pathName += oss.str() + stringlit(T, ".") + t_extName;
+							m_ofs.open(t_pathName, std::ofstream::out | std::ofstream::app);
+						}
 						iter++;
 					}
 					m_ofs << formattedStr.c_str();
@@ -286,13 +387,12 @@ namespace aricanli {
 			static std::mutex m_mutex;
 			static Formatter<T> fmt;
 			static unsigned long long m_maxFileSize;
-			static std::basic_string<T> m_fileName;
-			static std::basic_string<T> m_ExtensionName;
+			static std::basic_string<T> m_logPath;
 			static std::basic_ofstream<T> m_ofs;
 			static std::shared_ptr<Logger<T>> loggerInstance;
 			static LogPriority m_logPriority;
 			static LogOutput m_logOutput;
-			static std::basic_string<T> m_logPath;
+;
 		}; // end of class 
 
 		// Macro definitions for Logger::log() 
@@ -364,10 +464,6 @@ namespace aricanli {
 		LogOutput Logger<T>::m_logOutput = LogOutput::Console;
 		template<typename T>
 		std::basic_string<T> Logger<T>::m_logPath;
-		template<typename T>
-		std::basic_string<T> Logger<T>::m_fileName;
-		template<typename T>
-		std::basic_string<T> Logger<T>::m_ExtensionName;
 		template<typename T>
 		std::shared_ptr<Logger<T>> Logger<T>::loggerInstance = nullptr;
 		template <typename T>

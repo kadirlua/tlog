@@ -5,6 +5,7 @@
 #include <fstream>
 #include <locale>
 #include <codecvt>
+#include <iostream>
 #include <vector>
 #include "Formatter.h"
 #if __cplusplus >= 201703L
@@ -19,20 +20,19 @@
 #endif
 #endif
 
-
 /*
 * TODO:
 	Done :
 	- Add C++17 filesystem for limit the size of file
 	- add UTF8 support
 	- add C++14 file mkdir
+	- Macro definitions
+
 	Add :
 	
 	Test :
-	- Macro definitions
 	
 	Attention :
-	- changelog -> (release note)
 	- Attention to keywords. virtual  noexcept , override etc.
 	- Try shared_lock for C++17 & C++20
 */
@@ -59,6 +59,9 @@ namespace aricanli {
 			Console,
 			File
 		};
+
+
+		static constexpr const unsigned int MAX_FILE= 99;
 
 		// Stream wrapper class for console in char and wchar_t types
 		template <typename T>
@@ -185,52 +188,6 @@ namespace aricanli {
 				}
 			}
 
-			template<typename ...Args>
-			static void log(LogPriority messageLevel, int line, const std::basic_string<T> funcName, Args &&...args) {
-				/*
-				* Log given message with defined parameters and pass LogMessage() function
-				* @param messageLevel: Log Level
-				* @param line : __LINE__ macro
-				* @param funcName : __FILE__ macro
-				* @param ...args: Variadic template arguments
-				*/
-				std::lock_guard<std::mutex> _lock(m_mutex);
-				if (messageLevel <= m_logPriority) {
-					switch (messageLevel) {
-					case LogPriority::Quiet:
-						break;
-					case LogPriority::Fatal:
-						LogMessage(line, funcName, "FATAL:", std::forward<Args>(args)...);
-
-						break;
-					case LogPriority::Error:
-						LogMessage(line, funcName, "ERROR:", std::forward<Args>(args)...);
-
-						break;
-					case LogPriority::Warning:
-						LogMessage(line, funcName, "WARNING:", std::forward<Args>(args)...);
-
-						break;
-					case LogPriority::Info:
-						LogMessage(line, funcName, "INFO:", std::forward<Args>(args)...);
-
-						break;
-					case LogPriority::Verbose:
-						LogMessage(line, funcName, "VERBOSE:", std::forward<Args>(args)...);
-
-						break;
-					case LogPriority::Debug:
-						LogMessage(line, funcName, "DEBUG:", std::forward<Args>(args)...);
-
-						break;
-					case  LogPriority::Trace:
-						LogMessage(line, funcName, "TRACE:", std::forward<Args>(args)...);
-
-						break;
-					}
-				}
-			}
-
 			static void setFormatter(const std::basic_string<T>& t_fmt)  {
 				/*
 				* Get format type and pass to Formatter::getFormatter() function
@@ -314,7 +271,8 @@ namespace aricanli {
 					t_mkdir(t_path, 0777);
 #endif
 				}
-				m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt<wchar_t, char, mbstate_t>));
+
+				m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt<wchar_t, char, mbstate_t>("en_US.utf8")));
 				m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
 				m_ofs.seekp(0, std::ios_base::end);
 			}
@@ -336,58 +294,12 @@ namespace aricanli {
 				if (m_logOutput == LogOutput::File) {
 					if ((static_cast<unsigned long long>(m_ofs.tellp()) + formattedStr.length()) >= m_maxFileSize) {
 						m_ofs.close();
-						static int iter = 1;
-						std::basic_ostringstream<T> oss;
-						oss << iter;
-
-						const size_t pos = m_logPath.find_last_of('.');
-						if (pos != std::string::npos) {
-							std::basic_string<T> t_pathName = m_logPath.substr(0, pos);
-							std::basic_string<T> t_extName = m_logPath.substr(pos + 1);
-							t_pathName += oss.str() + stringlit(T, ".") + t_extName;
-							m_ofs.open(t_pathName, std::ofstream::out | std::ofstream::app);
-						}
-						iter++;
+						m_ofs.open(m_logPath, std::ios::out | std::ios::trunc);
 					}
 					m_ofs << formattedStr.c_str();
 				}
 				if (m_logOutput == LogOutput::Console)
 					StreamWrapper<T>::tout << formattedStr.c_str();
-			}
-
-
-			template <typename ...Args>
-			static void LogMessage(int line, const std::basic_string<T> funcName, Args &&...args) {
-				/*
-				* Pass argumants to set Formatter::format() and take back as formatted string
-				* and write the string to choosen stream in constructor
-				* @param logPriority: Log priority
-				* @param ...args: Variadic template arguments
-				*/
-
-				auto formattedStr = fmt.format(line, funcName, std::forward<Args>(args)...);
-				
-				formattedStr += '\n';
-				if (m_logOutput == LogOutput::File ) {
-					if ( (static_cast<unsigned long long>(m_ofs.tellp()) + formattedStr.length()) >= m_maxFileSize ) {
-						m_ofs.close();
-						static int iter = 1;
-						std::basic_ostringstream<T> oss;
-						oss << iter;
-
-						const size_t pos = m_logPath.find_last_of('.');
-						if (pos != std::string::npos) {
-							std::basic_string<T> t_pathName = m_logPath.substr(0, pos);
-							std::basic_string<T> t_extName = m_logPath.substr(pos + 1);
-							t_pathName += oss.str() + stringlit(T, ".") + t_extName;
-							m_ofs.open(t_pathName, std::ofstream::out | std::ofstream::app);
-						}
-						iter++;
-					}
-					m_ofs << formattedStr.c_str();
-				}
-				if (m_logOutput == LogOutput::Console)
-					StreamWrapper<T>::tout << formattedStr.c_str() ;
 			}
 
 			static std::vector<std::basic_string<T>> split(const std::basic_string<T>& s, T delim) {

@@ -122,78 +122,7 @@ namespace aricanli {
 				return t_format;
 			}
 
-			template<typename ...Args>
-			static std::basic_string<T> format(int line, const std::basic_string<T>& func, Args &&...args) {
-				/*
-				* Format given arguments with defined parameters and return as basic_string<T>
-				* @param line : __LINE__ macro
-				* @param func : __FILE__ macro
-				* @param ...args: Variadic template arguments
-				*/
 
-				std::basic_string<T> t_format = m_fmt;
-					
-				// Message ->
-				size_t foundMsg = t_format.find(stringlit(T, "%m")); // char , wchar_t
-				if (foundMsg != std::string::npos) {
-					std::basic_ostringstream<T> oss;
-					using unused = int[];
-
-					(void)unused {
-						0, (oss << args << " ", 0)...
-					};
-					t_format = findAndReplace(std::move(t_format), stringlit(T, "%m"), oss.str()); // char , wchar_t
-				}
-
-
-				// Line ->
-				size_t foundLine = t_format.find(stringlit(T, "%l")); // char , wchar_t
-				if (foundLine != std::string::npos) {
-					std::basic_ostringstream<T> oss;
-					oss << line;
-					//std::basic_string<T> t_line;
-					//t_line = { stringlit(T, "20") }; // fix this line
-					t_format = findAndReplace(std::move(t_format), stringlit(T, "%l"), oss.str()); // char , wchar_t
-
-				}
-
-				// Time ->
-				size_t foundTime = t_format.find(stringlit(T, "%t")); // char , wchar_t
-				if (foundTime != std::string::npos) {
-
-					std::basic_ostringstream<T> oss;
-#if __cplusplus >= 201703L
-					if constexpr (std::is_same_v<T, char>) {
-						oss << timePointAsString(std::chrono::system_clock::now()).c_str() << " ";
-					}
-#else
-					if (std::is_same_v<T, char>) {
-						oss << timePointAsString(std::chrono::system_clock::now()).c_str() << " ";
-					}
-#endif			
-
-
-#if __cplusplus >= 201703L
-					if constexpr (std::is_same_v<T, wchar_t>) {
-						oss << timePointAsWString(std::chrono::system_clock::now()).c_str() << " ";
-					}
-#else
-					if (std::is_same_v<T, wchar_t>) {
-						oss << timePointAsWString(std::chrono::system_clock::now()).c_str() << " ";
-				}
-#endif	
-
-					t_format = findAndReplace(std::move(t_format), stringlit(T, "%t"), oss.str()); // char , wchar_t
-				}
-
-				// Function ->
-				size_t foundFunc = t_format.find(stringlit(T, "%f"));// char , wchar_t
-				if (foundFunc != std::string::npos) {
-					t_format = findAndReplace(std::move(t_format), stringlit(T, "%f"), std::move(func)); // char , wchar_t
-				}
-
-				return t_format;
-			}
 				
 		protected:
 			static std::basic_string<T> findAndReplace(std::basic_string<T> t_format, const std::basic_string<T>& t_find, const std::basic_string<T>& t_replace) {

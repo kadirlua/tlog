@@ -23,20 +23,10 @@
 /*
 * TODO:
 	Done :
-	- Use type alias for template class. char -> Logger / wchar_t -> LoggerW
-	- Add time functions & __FILE__ macro
-	- Fix LogMessage
-	- Add time to streams in logMessage
-	- test setter functions
-	- Add Format support
-	- Improve comments. Especially Classes and  enum classes
-	- Fix character encoding
-	- limit unsigned int to unsigned long long
 	- Add C++17 filesystem for limit the size of file
 	- add UTF8 support
-
-	Add :
 	- add C++14 file mkdir
+	Add :
 	
 	Test :
 	- Macro definitions
@@ -83,6 +73,21 @@ namespace aricanli {
 		template<>
 		std::wostream& StreamWrapper<wchar_t>::tout = std::wcout;
 
+		// For PreC++17 to create a directory 
+#if __cplusplus < 201703L
+		template <typename T>
+		int t_mkdir(T) { }
+
+		template <>
+		int t_mkdir(std::string t_path) {
+			return _mkdir(t_path.c_str());
+		}
+
+		template <>
+		int t_mkdir(std::wstring t_path) {
+			return _wmkdir(t_path.c_str());
+		}
+#endif
 		// Class Logger<> 
 		// record of variadic arguments to selected stream in formatted string
 		// Example:
@@ -275,15 +280,12 @@ namespace aricanli {
 				std::lock_guard<std::mutex> _lock(m_mutex);
 				try {
 					auto t_root = t_path.parent_path();
-					if (!std::filesystem::exists(t_path)) {
+					
+					if (!std::filesystem::exists(t_path) && !t_root.empty()) {
 						std::filesystem::create_directories(t_root.string());
 					}
 					m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t, 0x10ffff, std::generate_header>));
 					m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
-
-					//std::locale utf8_locale(std::locale(), new utf8cvt<false>);
-
-
 					m_ofs.seekp(0, std::ios_base::end);
 				}
 				catch (const std::filesystem::filesystem_error& ex) {
@@ -301,15 +303,20 @@ namespace aricanli {
 				*/
 				std::lock_guard<std::mutex> _lock(m_mutex);
 
-
-				// Create directory 
+				char delim = t_path.find('/') != std::string::npos ? '/' : '\\';
+				auto ret = split(t_path, delim);
+				std::basic_string<T> path;
+				for (int i = 0; i < ret.size() - 1; i++) {
+					path += (i != 0) ? stringlit(T, "\\") + ret[i] : ret[i];
 #if defined _MSC_VER
-				_mkdir(t_path);
+					t_mkdir(path);
 #elif defined __GNUC__
-				mkdir(t_path, 0777);
+					t_mkdir(t_path, 0777);
 #endif
-
+				}
+				m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t, 0x10ffff, std::generate_header>));
 				m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
+				m_ofs.seekp(0, std::ios_base::end);
 			}
 #endif
 
@@ -383,6 +390,17 @@ namespace aricanli {
 					StreamWrapper<T>::tout << formattedStr.c_str() ;
 			}
 
+			static std::vector<std::basic_string<T>> split(const std::basic_string<T>& s, T delim) {
+				std::vector<std::basic_string<T>> result;
+				std::basic_stringstream<T> ss(s);
+				std::basic_string<T> item;
+
+				while (getline(ss, item, delim)) {
+					result.push_back(item);
+				}
+
+				return result;
+			}
 		protected:
 			static std::mutex m_mutex;
 			static Formatter<T> fmt;

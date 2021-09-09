@@ -1,4 +1,3 @@
-#pragma warning(disable : 4996)
 #pragma once
 #include <mutex>
 #include <string>
@@ -285,7 +284,7 @@ namespace aricanli {
 					if (!std::filesystem::exists(t_path) && !t_root.empty()) {
 						std::filesystem::create_directories(t_root.string());
 					}
-					m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t, 0x10ffff, std::generate_header>));
+					m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt<wchar_t, char, mbstate_t>));
 					m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
 					m_ofs.seekp(0, std::ios_base::end);
 				}
@@ -315,7 +314,7 @@ namespace aricanli {
 					t_mkdir(t_path, 0777);
 #endif
 				}
-				m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t, 0x10ffff, std::generate_header>));
+				m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt<wchar_t, char, mbstate_t>));
 				m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
 				m_ofs.seekp(0, std::ios_base::end);
 			}

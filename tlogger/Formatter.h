@@ -1,5 +1,3 @@
-
-#pragma warning(disable : 4996)
 #pragma once
 #include <sstream>
 #include <chrono>
@@ -226,7 +224,9 @@ namespace aricanli {
 				* return : basic_string<char>
 				*/
 				std::time_t t = std::chrono::system_clock::to_time_t(tp);
-				std::basic_string<char> ts = std::ctime(&t);
+				char tmBuff[30];
+				ctime_s(tmBuff, sizeof(tmBuff), &t);
+				std::basic_string<char> ts = tmBuff;
 				ts.resize(ts.size() - 1);
 				return ts;
 			}
@@ -238,7 +238,9 @@ namespace aricanli {
 				* return : basic_string<wchar_t>
 				*/
 				std::time_t t = std::chrono::system_clock::to_time_t(tp);
-				std::basic_string<char> ret = std::ctime(&t);
+				char tmBuff[30];
+				ctime_s(tmBuff, sizeof(tmBuff), &t);
+				std::basic_string<char> ret = tmBuff;
 				std::basic_string<wchar_t> ts = wtos(ret);
 				ts.resize(ts.size() - 1);
 				return ts;

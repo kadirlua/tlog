@@ -100,53 +100,54 @@ namespace aricanli {
 		template <typename T = char>
 		class Logger {
 		public:
-			Logger(const Logger&) noexcept = delete;
-			Logger& operator=(const Logger&) noexcept = delete;
-			Logger(Logger&&) noexcept = default;
-			Logger& operator=(Logger&&) noexcept = default;
+			Logger(const Logger&) = delete;
+			Logger& operator=(const Logger&) = delete;
 			virtual ~Logger() noexcept {
 				std::lock_guard<std::mutex> _lock(m_mutex);
 				m_ofs.close();
 			}
 
+			/*
+			* Get single instance or create new object if not created
+			* @return: std::shared_ptr<Logger>
+			*/
 			static std::shared_ptr<Logger> getInstance() {
-				/**
-				* Get single instance or create new object if not created
-				* @return: std::shared_ptr<Logger>
-				*/
+
 				if (loggerInstance == nullptr)
 					loggerInstance = std::shared_ptr<Logger<T>>(new Logger<T>{  });
 				return loggerInstance;
 			}
 
+			/*
+			* Not set or call for stream to console
+			* Set log path as std::basic_string for stream to file
+			* @param t_filePath : basic_string<T>
+			*/
 			static void setLogOutput(std::basic_string<T> t_filePath) {
-				/*
-				* Set log path as std::basic_string
-				* @param t_fileName : file name
-				* @param t_extName : extension name
-				*/
+
 				std::lock_guard<std::mutex> _lock(m_mutex);		 
 				m_logPath = t_filePath;  
 			}
 
+			/*
+			* Set log priority level
+			* @param t_logPriority: enum class LogPriority
+			*/
 			static void setLogPriority(LogPriority t_logPriority) {
-				/*
-				* Set log priority level
-				* @param t_logPriority: enum class LogPriority
-				*/
 				std::lock_guard<std::mutex> _lock(m_mutex);
 				m_logPriority = t_logPriority;
 			}
 
 			static void log(LogPriority messageLevel){} // For Quiet priority 
 
+			/*
+			* Log given message with defined parameters and pass LogMessage() function
+			* @param messageLevel: Log Level
+			* @param ...args: Variadic template arguments
+			*/
 			template<typename ...Args>
 			static void log(LogPriority messageLevel, Args &&...args) {
-				/*
-				* Log given message with defined parameters and pass LogMessage() function
-				* @param messageLevel: Log Level
-				* @param ...args: Variadic template arguments
-				*/
+
 				std::lock_guard<std::mutex> _lock(m_mutex);
 				if (messageLevel <= m_logPriority) {
 					switch (messageLevel) {
@@ -184,28 +185,32 @@ namespace aricanli {
 				}
 			}
 
+			/*
+			* Get format type and pass to Formatter::getFormatter() function
+			* default as %t %m
+			*/
 			static void setFormatter(const std::basic_string<T>& t_fmt)  {
-				/*
-				* Get format type and pass to Formatter::getFormatter() function
-				* default as %t %m
-				*/
+
 				std::lock_guard<std::mutex> _lock(m_mutex);
 				fmt.getFormatter(t_fmt);
 			}
 
+			/*
+			* Set file's limit (byte)
+			*/
 			static void setFileLimit(unsigned long long  t_fileLimit)  {
-				/*
-				* Set file's limit (byte)
-				* default as %t %m
-				*/
+
 				std::lock_guard<std::mutex> _lock(m_mutex);
 				m_maxFileSize = t_fileLimit; 
 			}
 
+			/*
+			* Set output format
+			* if m_logPath is empty then stream to console
+			* if m_logPath is not empty then stream to file
+			*/
 			static void setLogFormat() {
-				/*
-				* 
-				*/
+
 				if (m_logPath.empty()) {
 					m_logOutput = LogOutput::Console;
 				}
@@ -215,26 +220,28 @@ namespace aricanli {
 				}
 			}
 		protected:
+			/*
+			* Construct Logger class as singleton.
+			* client can not access default constructor
+			* if m_logPath string is empty select the stream as console
+			* else select the stream as file
+			*/
 			Logger() noexcept
 			{
-				/*
-				* Construct Logger class as singleton.
-				* client can not access default constructor
-				* if m_logPath string is empty select the stream as console
-				* else select the stream as file
-				*/
+
 				setFormatter(stringlit(T,"%m %t"));
 				setLogFormat();
 			}
 
 #if __cplusplus >= 201703L
+			/*
+			* For C++17 and C++20 versions
+			* Open file in UTF-8 standart in ofstream write or append mode
+			* if the parent path not exist then create directory
+			* @param t_path : filesystem::path
+			*/
 			static void openFile(std::filesystem::path t_path) {
-				/*
-				* For C++17 and C++20 versions
-				* Open file in UTF-8 standart in ofstream write or append mode
-				* if the parent path not exist then create directory
-				* @param t_path : filesystem::path
-				*/
+
 				std::lock_guard<std::mutex> _lock(m_mutex);
 				try {
 					auto t_root = t_path.parent_path();
@@ -254,13 +261,14 @@ namespace aricanli {
 				}
 			}
 #else
+			/*
+			* For C++14 and previous versions
+			* Open file in UTF-8 standart in ofstream write or append mode
+			* if the parent path not exist then create directory
+			* @param t_path : basic_string<T>
+			*/
 			static void openFile(const std::basic_string<T>& t_path) {
-				/*
-				* For C++14 and previous versions
-				* Open file in UTF-8 standart in ofstream write or append mode
-				* if the parent path not exist then create directory
-				* @param t_path : filesystem::path
-				*/
+
 				std::lock_guard<std::mutex> _lock(m_mutex);
 
 				char delim = t_path.find('/') != std::string::npos ? '/' : '\\';
@@ -280,16 +288,13 @@ namespace aricanli {
 				m_ofs.seekp(0, std::ios_base::end);
 			}
 #endif
-
-
+			/*
+			* Pass argumants to set Formatter::format() and take back as formatted string
+			* and write the string to choosen stream in constructor
+			* @param ...args: Variadic template arguments
+			*/
 			template <typename ...Args>
 			static void LogMessage( Args &&...args) {
-				/*
-				* Pass argumants to set Formatter::format() and take back as formatted string
-				* and write the string to choosen stream in constructor
-				* @param logPriority: Log priority
-				* @param ...args: Variadic template arguments
-				*/
 
 				auto formattedStr = fmt.format(std::forward<Args>(args)...);
 
@@ -305,14 +310,14 @@ namespace aricanli {
 					StreamWrapper<T>::tout << formattedStr.c_str();
 			}
 
+			/*
+			* Divides a String into an ordered list of substrings, puts these substrings into
+			* an vector of string
+			* @param strSplit: basic_string<T>
+			* @param Delim: Template argument
+			* @return : result : vector<basic_string<T>>
+			*/
 			static std::vector<std::basic_string<T>> split(const std::basic_string<T>& strSplit, T delim) {
-				/*
-				* Divides a String into an ordered list of substrings, puts these substrings into 
-				* an vector of string
-				* @param logPriority: basic_string<T>
-				* @param Delim: Template argument
-				* @return : result : vector<basic_string<T>>
-				*/
 				std::vector<std::basic_string<T>> result;
 				std::basic_stringstream<T> ss(strSplit);
 				std::basic_string<T> item;
@@ -320,7 +325,6 @@ namespace aricanli {
 				while (getline(ss, item, delim)) {
 					result.push_back(item);
 				}
-
 				return result;
 			}
 		protected:
@@ -442,3 +446,4 @@ namespace aricanli {
 
 	} // end of general namespace
 } // end of aricanli namespace
+ 

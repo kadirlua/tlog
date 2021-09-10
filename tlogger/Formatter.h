@@ -53,27 +53,26 @@ namespace aricanli {
 		template<typename T>
 		class Formatter {
 		public:
-			Formatter() {
-			}
+			Formatter() noexcept = default;
 			Formatter(const Formatter&) noexcept = delete;
 			Formatter& operator=(const Formatter&) = delete;
 
-			static void getFormatter(std::basic_string<T> fmt) {
-				/*
-				* Get format type as basic_string<T>
-				* @param fmtStr : basic_string<T>
-				*/
+			/*
+			* Get format type as basic_string<T>
+			* @param fmtStr : basic_string<T>
+			*/
+			static void getFormatter(std::basic_string<T> fmt) noexcept {
+
 				m_fmt = fmt;
 			}
 
 
+			/*
+			* Format given arguments with defined parameters and return as basic_string<T>
+			* @param ...args: Variadic template arguments
+			*/
 			template<typename ...Args>
 			static std::basic_string<T> format( Args &&...args) {
-				/*
-				* Format given arguments with defined parameters and return as basic_string<T>
-				* @param ...args: Variadic template arguments
-				*/
-
 				std::basic_string<T> t_format = m_fmt;
 
 				// Message ->
@@ -124,14 +123,15 @@ namespace aricanli {
 
 				
 		protected:
+			/*
+			* find an substr in first argument and replace with last argument
+			* param t_format: basic_string<T>
+			* param t_find: basic_string<T>
+			* param t_replace: basic_string<T>
+			* return std::move(t_format): basic_string<T>
+			*/
 			static std::basic_string<T> findAndReplace(std::basic_string<T> t_format, const std::basic_string<T>& t_find, const std::basic_string<T>& t_replace) {
-				/*
-				* find an substr in first argument and replace with last argument
-				* param t_format: basic_string<T>
-				* param t_find: basic_string<T>
-				* param t_replace: basic_string<T>
-				* return std::move(t_format): basic_string<T>
-				*/
+
 				t_format.replace(t_format.find(t_find), t_find.length(), t_replace);
 				return std::move(t_format);
 			}
@@ -148,12 +148,12 @@ namespace aricanli {
 				return wc;
 			}
 
+			/*
+			* take time point from argument, convert to basic_string<char> format and return
+			* param : chrono::system_clock::timepoint
+			* return : basic_string<char>
+			*/
 			static std::basic_string<char> timePointAsString(const std::chrono::system_clock::time_point& tp) {
-				/*
-				* take time point from argument, convert to basic_string<char> format and return
-				* param : chrono::system_clock::timepoint
-				* return : basic_string<char>
-				*/
 				std::time_t t = std::chrono::system_clock::to_time_t(tp);
 				char tmBuff[30];
 				ctime_s(tmBuff, sizeof(tmBuff), &t);
@@ -162,12 +162,12 @@ namespace aricanli {
 				return ts;
 			}
 
+			/*
+			* take time point from argument, convert to basic_string<wchar_t> format and return
+			* param : chrono::system_clock::timepoint
+			* return : basic_string<wchar_t>
+			*/
 			static std::basic_string<wchar_t> timePointAsWString(const std::chrono::system_clock::time_point& tp) {
-				/*
-				* take time point from argument, convert to basic_string<wchar_t> format and return
-				* param : chrono::system_clock::timepoint
-				* return : basic_string<wchar_t>
-				*/
 				std::time_t t = std::chrono::system_clock::to_time_t(tp);
 				char tmBuff[30];
 				ctime_s(tmBuff, sizeof(tmBuff), &t);

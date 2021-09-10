@@ -61,8 +61,6 @@ namespace aricanli {
 		};
 
 
-		static constexpr const unsigned int MAX_FILE= 99;
-
 		// Stream wrapper class for console in char and wchar_t types
 		template <typename T>
 		class StreamWrapper {
@@ -79,15 +77,15 @@ namespace aricanli {
 		// For PreC++17 to create a directory 
 #if __cplusplus < 201703L
 		template <typename T>
-		int t_mkdir(T) { }
+		static int t_mkdir(T) { }
 
 		template <>
-		int t_mkdir(std::string t_path) {
+		static int t_mkdir(std::string t_path) {
 			return _mkdir(t_path.c_str());
 		}
 
 		template <>
-		int t_mkdir(std::wstring t_path) {
+		static int t_mkdir(std::wstring t_path) {
 			return _wmkdir(t_path.c_str());
 		}
 #endif
@@ -147,8 +145,6 @@ namespace aricanli {
 				/*
 				* Log given message with defined parameters and pass LogMessage() function
 				* @param messageLevel: Log Level
-				* @param line : __LINE__ macro
-				* @param funcName : __FILE__ macro
 				* @param ...args: Variadic template arguments
 				*/
 				std::lock_guard<std::mutex> _lock(m_mutex);
@@ -207,6 +203,9 @@ namespace aricanli {
 			}
 
 			static void setLogFormat() {
+				/*
+				* 
+				*/
 				if (m_logPath.empty()) {
 					m_logOutput = LogOutput::Console;
 				}
@@ -231,7 +230,9 @@ namespace aricanli {
 #if __cplusplus >= 201703L
 			static void openFile(std::filesystem::path t_path) {
 				/*
-				* Open file in ofstream out or append mode
+				* For C++17 and C++20 versions
+				* Open file in UTF-8 standart in ofstream write or append mode
+				* if the parent path not exist then create directory
 				* @param t_path : filesystem::path
 				*/
 				std::lock_guard<std::mutex> _lock(m_mutex);
@@ -255,7 +256,9 @@ namespace aricanli {
 #else
 			static void openFile(const std::basic_string<T>& t_path) {
 				/*
-				* Open file in ofstream out or append mode
+				* For C++14 and previous versions
+				* Open file in UTF-8 standart in ofstream write or append mode
+				* if the parent path not exist then create directory
 				* @param t_path : filesystem::path
 				*/
 				std::lock_guard<std::mutex> _lock(m_mutex);
@@ -302,9 +305,16 @@ namespace aricanli {
 					StreamWrapper<T>::tout << formattedStr.c_str();
 			}
 
-			static std::vector<std::basic_string<T>> split(const std::basic_string<T>& s, T delim) {
+			static std::vector<std::basic_string<T>> split(const std::basic_string<T>& strSplit, T delim) {
+				/*
+				* Divides a String into an ordered list of substrings, puts these substrings into 
+				* an vector of string
+				* @param logPriority: basic_string<T>
+				* @param Delim: Template argument
+				* @return : result : vector<basic_string<T>>
+				*/
 				std::vector<std::basic_string<T>> result;
-				std::basic_stringstream<T> ss(s);
+				std::basic_stringstream<T> ss(strSplit);
 				std::basic_string<T> item;
 
 				while (getline(ss, item, delim)) {

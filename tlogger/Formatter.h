@@ -14,6 +14,7 @@ namespace aricanli {
 			FUNC
 		};
 
+
 #ifndef _T
 #define __T(x)      L ## x
 #define _T(x)       __T(x)
@@ -70,8 +71,6 @@ namespace aricanli {
 			static std::basic_string<T> format( Args &&...args) {
 				/*
 				* Format given arguments with defined parameters and return as basic_string<T>
-				* @param line : __LINE__ macro
-				* @param func : __FILE__ macro
 				* @param ...args: Variadic template arguments
 				*/
 
@@ -126,16 +125,19 @@ namespace aricanli {
 				
 		protected:
 			static std::basic_string<T> findAndReplace(std::basic_string<T> t_format, const std::basic_string<T>& t_find, const std::basic_string<T>& t_replace) {
+				/*
+				* find an substr in first argument and replace with last argument
+				* param t_format: basic_string<T>
+				* param t_find: basic_string<T>
+				* param t_replace: basic_string<T>
+				* return std::move(t_format): basic_string<T>
+				*/
 				t_format.replace(t_format.find(t_find), t_find.length(), t_replace);
 				return std::move(t_format);
 			}
 
 			static std::wstring wtos(std::string& value) {
-				/*
-				* take basic_string<char> and convert to basic_string<wchar_t> format
-				* param : basic_string<char>
-				* return : basic_string<wchar_t>
-				*/
+
 				const size_t cSize = value.size() + 1;
 				std::wstring wc;
 				wc.resize(cSize);

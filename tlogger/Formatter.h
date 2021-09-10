@@ -6,7 +6,7 @@
 namespace aricanli {
 	namespace general {
 		// formatType enum class
-		// possible ways to format type
+		// possible ways to format type : LINE , MSG , TIME , FUNC
 		enum class formatType {
 			LINE,
 			MSG,

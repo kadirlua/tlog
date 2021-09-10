@@ -7,6 +7,7 @@
 #include <codecvt>
 #include <iostream>
 #include <vector>
+#include <windows.h>
 #include "Formatter.h"
 #if __cplusplus >= 201703L
 #include <string_view>
@@ -41,7 +42,8 @@ namespace aricanli {
 	namespace general {
 
 		// LogPriority enum class
-		// Possible priority levels
+		// Possible priority levels : 
+		//Quiet , Fatal , Error , Warning , Info , Verbose , Debug , Trace
 		enum class LogPriority : unsigned int {
 			Quiet = 0,
 			Fatal = 8,
@@ -249,7 +251,7 @@ namespace aricanli {
 					if (!std::filesystem::exists(t_path) && !t_root.empty()) {
 						std::filesystem::create_directories(t_root.string());
 					}
-					m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt<wchar_t, char, mbstate_t>));
+					m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt<wchar_t, char, mbstate_t>("en_US.utf8")));
 					m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
 					m_ofs.seekp(0, std::ios_base::end);
 				}
@@ -306,8 +308,12 @@ namespace aricanli {
 					}
 					m_ofs << formattedStr.c_str();
 				}
-				if (m_logOutput == LogOutput::Console)
+				if (m_logOutput == LogOutput::Console) {
+					SetConsoleOutputCP(CP_UTF8);
+					StreamWrapper<T>::tout.imbue(std::locale(std::locale::empty(), new std::codecvt<wchar_t, char, mbstate_t>("en_US.utf8")));
 					StreamWrapper<T>::tout << formattedStr.c_str();
+				}
+					
 			}
 
 			/*

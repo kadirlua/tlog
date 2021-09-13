@@ -94,22 +94,22 @@ namespace aricanli {
 
 					std::basic_ostringstream<T> oss;
 #if __cplusplus >= 201703L
-					if constexpr (std::is_same_v<T, char>) {
+					if constexpr (std::is_same<T, char>::value) {
 						oss << timePointAsString(std::chrono::system_clock::now()).c_str() << " ";
 					}
 #else
-					if (std::is_same_v<T, char>) {
+					if (std::is_same<T, char>::value) {
 						oss << timePointAsString(std::chrono::system_clock::now()).c_str() << " ";
 					}
 #endif			
 
 
 #if __cplusplus >= 201703L
-					if constexpr (std::is_same_v<T, wchar_t>) {
+					if constexpr (std::is_same<T, wchar_t>::value) {
 						oss << timePointAsWString(std::chrono::system_clock::now()).c_str() << " ";
 					}
 #else
-					if (std::is_same_v<T, wchar_t>) {
+					if (std::is_same<T, wchar_t>::value) {
 						oss << timePointAsWString(std::chrono::system_clock::now()).c_str() << " ";
 					}
 #endif	
@@ -133,19 +133,23 @@ namespace aricanli {
 			static std::basic_string<T> findAndReplace(std::basic_string<T> t_format, const std::basic_string<T>& t_find, const std::basic_string<T>& t_replace) {
 
 				t_format.replace(t_format.find(t_find), t_find.length(), t_replace);
-				return std::move(t_format);
+				return t_format;
 			}
 
 			static std::wstring wtos(std::string& value) {
-
+#if defined _MSC_VER
 				const size_t cSize = value.size() + 1;
 				std::wstring wc;
 				wc.resize(cSize);
 				size_t cSize1;
 				mbstowcs_s(&cSize1, (wchar_t*)&wc[0], cSize, value.c_str(), cSize);
 				wc.pop_back();
-
 				return wc;
+#elif defined __GNUC__ 
+				std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> strconverter;
+				return strconverter.from_bytes(value);
+#endif
+
 			}
 
 			/*
@@ -156,7 +160,12 @@ namespace aricanli {
 			static std::basic_string<char> timePointAsString(const std::chrono::system_clock::time_point& tp) {
 				std::time_t t = std::chrono::system_clock::to_time_t(tp);
 				char tmBuff[30];
+#if defined _MSC_VER
 				ctime_s(tmBuff, sizeof(tmBuff), &t);
+
+#elif defined __GNUC__		
+				ctime_r(&t, tmBuff);
+#endif	
 				std::basic_string<char> ts = tmBuff;
 				ts.resize(ts.size() - 1);
 				return ts;
@@ -170,7 +179,13 @@ namespace aricanli {
 			static std::basic_string<wchar_t> timePointAsWString(const std::chrono::system_clock::time_point& tp) {
 				std::time_t t = std::chrono::system_clock::to_time_t(tp);
 				char tmBuff[30];
+#if defined _MSC_VER
 				ctime_s(tmBuff, sizeof(tmBuff), &t);
+
+#elif defined __GNUC__
+
+				ctime_r(&t, tmBuff);
+#endif				
 				std::basic_string<char> ret = tmBuff;
 				std::basic_string<wchar_t> ts = wtos(ret);
 				ts.resize(ts.size() - 1);
@@ -183,8 +198,8 @@ namespace aricanli {
 
 
 		// Intialize static data members
-		std::basic_string<char> Formatter<char>::m_fmt;
-		std::basic_string<wchar_t> Formatter<wchar_t>::m_fmt;
+		template<typename T>
+		std::basic_string<T> Formatter<T>::m_fmt = stringlit(T, "%m %t");
 
 	} // end of general namespace
 } // end of aricanli namespace

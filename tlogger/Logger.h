@@ -7,7 +7,6 @@
 #include <codecvt>
 #include <iostream>
 #include <vector>
-#include <windows.h>
 #include "Formatter.h"
 #if __cplusplus >= 201703L
 #include <string_view>
@@ -21,13 +20,10 @@
 #endif
 #endif
 
+
 /*
 * TODO:
 	Done :
-	- Add C++17 filesystem for limit the size of file
-	- add UTF8 support
-	- add C++14 file mkdir
-	- Macro definitions
 
 	Add :
 	
@@ -78,18 +74,34 @@ namespace aricanli {
 
 		// For PreC++17 to create a directory 
 #if __cplusplus < 201703L
+
 		template <typename T>
-		static int t_mkdir(T) { }
+		static void t_mkdir(T) { }
 
+
+#if defined _MSC_VER
 		template <>
-		static int t_mkdir(std::string t_path) {
-			return _mkdir(t_path.c_str());
+		static void t_mkdir(std::string t_path) {
+			_mkdir(t_path.c_str());
 		}
 
 		template <>
-		static int t_mkdir(std::wstring t_path) {
-			return _wmkdir(t_path.c_str());
+		static void t_mkdir(std::wstring t_path) {
+			_wmkdir(t_path.c_str());
 		}
+#elif defined __GNUC__
+		template <>
+		static void t_mkdir(std::string t_path) {
+			mkdir(t_path.c_str(), 0777);
+		}
+
+		template <>
+		static void t_mkdir(std::wstring t_path) {
+			std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> strconverter;
+			mkdir(strconverter.to_bytes(t_path).c_str(), 0777);
+		}
+#endif
+
 #endif
 		// Class Logger<> 
 		// record of variadic arguments to selected stream in formatted string
@@ -127,8 +139,8 @@ namespace aricanli {
 			*/
 			static void setLogOutput(std::basic_string<T> t_filePath) {
 
-				std::lock_guard<std::mutex> _lock(m_mutex);		 
-				m_logPath = t_filePath;  
+				std::lock_guard<std::mutex> _lock(m_mutex);
+				m_logPath = t_filePath;
 			}
 
 			/*
@@ -140,7 +152,7 @@ namespace aricanli {
 				m_logPriority = t_logPriority;
 			}
 
-			static void log(LogPriority messageLevel){} // For Quiet priority 
+			static void log(LogPriority messageLevel) {} // For Quiet priority 
 
 			/*
 			* Log given message with defined parameters and pass LogMessage() function
@@ -156,31 +168,31 @@ namespace aricanli {
 					case LogPriority::Quiet:
 						break;
 					case LogPriority::Fatal:
-						LogMessage( "FATAL:", std::forward<Args>(args)...);
+						LogMessage("FATAL:", std::forward<Args>(args)...);
 
 						break;
 					case LogPriority::Error:
-						LogMessage( "ERROR:", std::forward<Args>(args)...);
+						LogMessage("ERROR:", std::forward<Args>(args)...);
 
 						break;
 					case LogPriority::Warning:
-						LogMessage( "WARNING:", std::forward<Args>(args)...);
+						LogMessage("WARNING:", std::forward<Args>(args)...);
 
 						break;
 					case LogPriority::Info:
-						LogMessage( "INFO:", std::forward<Args>(args)...);
+						LogMessage("INFO:", std::forward<Args>(args)...);
 
 						break;
 					case LogPriority::Verbose:
-						LogMessage( "VERBOSE:", std::forward<Args>(args)...);
+						LogMessage("VERBOSE:", std::forward<Args>(args)...);
 
 						break;
 					case LogPriority::Debug:
-						LogMessage( "DEBUG:", std::forward<Args>(args)...);
+						LogMessage("DEBUG:", std::forward<Args>(args)...);
 
 						break;
 					case  LogPriority::Trace:
-						LogMessage( "TRACE:", std::forward<Args>(args)...);
+						LogMessage("TRACE:", std::forward<Args>(args)...);
 
 						break;
 					}
@@ -191,7 +203,7 @@ namespace aricanli {
 			* Get format type and pass to Formatter::getFormatter() function
 			* default as %t %m
 			*/
-			static void setFormatter(const std::basic_string<T>& t_fmt)  {
+			static void setFormatter(const std::basic_string<T>& t_fmt) {
 
 				std::lock_guard<std::mutex> _lock(m_mutex);
 				fmt.getFormatter(t_fmt);
@@ -200,10 +212,10 @@ namespace aricanli {
 			/*
 			* Set file's limit (byte)
 			*/
-			static void setFileLimit(unsigned long long  t_fileLimit)  {
+			static void setFileLimit(unsigned long long  t_fileLimit) {
 
 				std::lock_guard<std::mutex> _lock(m_mutex);
-				m_maxFileSize = t_fileLimit; 
+				m_maxFileSize = t_fileLimit;
 			}
 
 			/*
@@ -230,8 +242,6 @@ namespace aricanli {
 			*/
 			Logger() noexcept
 			{
-
-				setFormatter(stringlit(T,"%m %t"));
 				setLogFormat();
 			}
 
@@ -247,11 +257,15 @@ namespace aricanli {
 				std::lock_guard<std::mutex> _lock(m_mutex);
 				try {
 					auto t_root = t_path.parent_path();
-					
+
 					if (!std::filesystem::exists(t_path) && !t_root.empty()) {
 						std::filesystem::create_directories(t_root.string());
 					}
+#if defined _MSC_VER
 					m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt<wchar_t, char, mbstate_t>("en_US.utf8")));
+#elif defined __GNUC__
+					m_ofs.imbue(std::locale(std::locale(), new std::codecvt<wchar_t, char, mbstate_t>));
+#endif
 					m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
 					m_ofs.seekp(0, std::ios_base::end);
 				}
@@ -277,16 +291,15 @@ namespace aricanli {
 				auto ret = split(t_path, delim);
 				std::basic_string<T> path;
 				for (int i = 0; i < ret.size() - 1; i++) {
-					path += (i != 0) ? stringlit(T, "\\") + ret[i] : ret[i];
-#if defined _MSC_VER
+					path += (i != 0) ? stringlit(T, "/") + ret[i] : ret[i];
 					t_mkdir(path);
-#elif defined __GNUC__
-					t_mkdir(t_path, 0777);
-#endif
 				}
-
+#if defined _MSC_VER
 				m_ofs.imbue(std::locale(std::locale::empty(), new std::codecvt<wchar_t, char, mbstate_t>("en_US.utf8")));
-				m_ofs.open(t_path, std::ofstream::out | std::ofstream::app);
+#elif defined __GNUC__
+				m_ofs.imbue(std::locale(std::locale(), new std::codecvt<wchar_t, char, mbstate_t>));
+#endif
+				m_ofs.open(t_path.c_str(), std::ofstream::out | std::ofstream::app);
 				m_ofs.seekp(0, std::ios_base::end);
 			}
 #endif
@@ -296,7 +309,7 @@ namespace aricanli {
 			* @param ...args: Variadic template arguments
 			*/
 			template <typename ...Args>
-			static void LogMessage( Args &&...args) {
+			static void LogMessage(Args &&...args) {
 
 				auto formattedStr = fmt.format(std::forward<Args>(args)...);
 
@@ -308,9 +321,9 @@ namespace aricanli {
 					}
 					m_ofs << formattedStr.c_str();
 				}
-				if (m_logOutput == LogOutput::Console) 
-					StreamWrapper<T>::tout << formattedStr.c_str();		
-					
+				if (m_logOutput == LogOutput::Console)
+					StreamWrapper<T>::tout << formattedStr.c_str();
+
 			}
 
 			/*
@@ -339,91 +352,62 @@ namespace aricanli {
 			static std::shared_ptr<Logger<T>> loggerInstance;
 			static LogPriority m_logPriority;
 			static LogOutput m_logOutput;
-;
+			;
 		}; // end of class 
 
 		// Macro definitions for Logger::log() 
 #define LOG_QUIET()
-#define LOG_SET_FORMAT_C( formatter )  {                                    \
-		   aricanli::general::Logger<char>::setFormatter(formatter);        }
-#define LOG_SET_OUTPUT_C( path)  {									        \
-		   aricanli::general::Logger<char>::setLogOutput(path);             }
-#define LOG_SET_FILE_LIMIT_C( fileLimit)  {									\
-		   aricanli::general::Logger<char>::setFileLimit(fileLimit);        }
-#define LOG_SET_OUTPUT_FORMAT_C( )  {										\
-		   aricanli::general::Logger<char>::setLogFormat();                 }
-#define LOG_SET_PRIORITY_QUIET_C( )  {										\
-		   aricanli::general::Logger<char>::setLogPriority(LogPriority::Quiet);}
-#define LOG_SET_PRIORITY_FATAL_C( )  { \
-		   aricanli::general::Logger<char>::setLogPriority(LogPriority::Fatal);}
-#define LOG_SET_PRIORITY_ERROR_C( )  { \
-		   aricanli::general::Logger<char>::setLogPriority(LogPriority::Error);}
-#define LOG_SET_PRIORITY_WARNING_C( )  { \
-		   aricanli::general::Logger<char>::setLogPriority(LogPriority::Warning);}
-#define LOG_SET_PRIORITY_INFO_C( )  { \
-		   aricanli::general::Logger<char>::setLogPriority(LogPriority::Info);}
-#define LOG_SET_PRIORITY_VERBOSE_C( )  { \
-		   aricanli::general::Logger<char>::setLogPriority(LogPriority::Verbose);}
-#define LOG_SET_PRIORITY_DEBUG_C( )  { \
-		   aricanli::general::Logger<char>::setLogPriority(LogPriority::Debug);}
-#define LOG_SET_PRIORITY_TRACE_C( )  { \
-		   aricanli::general::Logger<char>::setLogPriority(LogPriority::Trace);}
+#define LOG_SET_FORMAT_C( formatter )  {													\
+		   aricanli::general::Logger<char>::setFormatter(formatter); }
+#define LOG_SET_OUTPUT_C( path)  {															\
+		   aricanli::general::Logger<char>::setLogOutput(path); 							\
+			aricanli::general::Logger<char>::setLogFormat(); }
+#define LOG_SET_FILE_LIMIT_C( fileLimit)  {													\
+		   aricanli::general::Logger<char>::setFileLimit(fileLimit); }
+#define LOG_SET_PRIORITY_C( severity )  {													\
+		 aricanli::general::Logger<char>::setLogPriority( static_cast<aricanli::general::LogPriority>(severity)); }
 
-#define LOG_FATAL_C( ... )  { \
-		   aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Fatal, __VA_ARGS__ );}
-#define LOG_ERROR_C( line, file, ... )   { \
+#define LOG_FATAL_C( ... )  {																\
+		   aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Fatal, __VA_ARGS__ ); }
+#define LOG_ERROR_C( line, file, ... )   {													\
 		aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Error, line, file, __VA_ARGS__ );	}
-#define LOG_WARNING_C( line,file,... ) { aricanli::general::Logger<char>::log( \
-		  aricanli::general::LogPriority::Warning, line, file, __VA_ARGS__ );}
-#define LOG_INFO_C( ...)     { aricanli::general::Logger<char>::log( \
-		  aricanli::general::LogPriority::Info, __VA_ARGS__ );}
-#define LOG_VERBOSE_C( ... ) { aricanli::general::Logger<char>::log( \
-		  aricanli::general::LogPriority::Verbose, __VA_ARGS__ );}
-#define LOG_DEBUG_C( ... )   { aricanli::general::Logger<char>::log( \
-		  aricanli::general::LogPriority::Debug, __VA_ARGS__ );}
-#define LOG_TRACE_C( ... )   { aricanli::general::Logger<char>::log( \
-		  aricanli::general::LogPriority::Trace, __VA_ARGS__ );}
+#define LOG_WARNING_C( line,file,... ) { aricanli::general::Logger<char>::log(				\
+		  aricanli::general::LogPriority::Warning, line, file, __VA_ARGS__ ); }
+#define LOG_INFO_C( ...)     { aricanli::general::Logger<char>::log(						\
+		  aricanli::general::LogPriority::Info, __VA_ARGS__ ); }
+#define LOG_VERBOSE_C( ... ) { aricanli::general::Logger<char>::log(						\
+		  aricanli::general::LogPriority::Verbose, __VA_ARGS__ ); }
+#define LOG_DEBUG_C( ... )   { aricanli::general::Logger<char>::log(						\
+		  aricanli::general::LogPriority::Debug, __VA_ARGS__ ); }
+#define LOG_TRACE_C( ... )   { aricanli::general::Logger<char>::log(						\
+		  aricanli::general::LogPriority::Trace, __VA_ARGS__ ); }
 
 
-#define LOG_SET_FORMAT_W( formatter )  {                                       \
-		   aricanli::general::Logger<wchar_t>::setFormatter(formatter);        }
-#define LOG_SET_OUTPUT_W( path)  {									           \
-		   aricanli::general::Logger<wchar_t>::setLogOutput(path);             }
-#define LOG_SET_FILE_LIMIT_W( fileLimit)  {									   \
-		   aricanli::general::Logger<wchar_t>::setFileLimit(fileLimit);        }
-#define LOG_SET_OUTPUT_FORMAT_W( )  {										   \
-		   aricanli::general::Logger<wchar_t>::setLogFormat();                 }
-#define LOG_SET_PRIORITY_QUIET_W( )  {										   \
-		   aricanli::general::Logger<wchar_t>::setLogPriority(LogPriority::Quiet);}
-#define LOG_SET_PRIORITY_FATAL_W( )  { \
-		   aricanli::general::Logger<wchar_t>::setLogPriority(LogPriority::Fatal);}
-#define LOG_SET_PRIORITY_ERROR_W( )  { \
-		   aricanli::general::Logger<wchar_t>::setLogPriority(LogPriority::Error);}
-#define LOG_SET_PRIORITY_WARNING_W( )  { \
-		   aricanli::general::Logger<wchar_t>::setLogPriority(LogPriority::Warning);}
-#define LOG_SET_PRIORITY_INFO_W( )  { \
-		   aricanli::general::Logger<wchar_t>::setLogPriority(LogPriority::Info);}
-#define LOG_SET_PRIORITY_VERBOSE_W( )  { \
-		   aricanli::general::Logger<wchar_t>::setLogPriority(LogPriority::Verbose);}
-#define LOG_SET_PRIORITY_DEBUG_W( )  { \
-		   aricanli::general::Logger<wchar_t>::setLogPriority(LogPriority::Debug);}
-#define LOG_SET_PRIORITY_TRACE_W( )  { \
-		   aricanli::general::Logger<wchar_t>::setLogPriority(LogPriority::Trace);}
+#define LOG_SET_FORMAT_W( formatter )  {													\
+		   aricanli::general::Logger<wchar_t>::setFormatter(formatter); }
+#define LOG_SET_OUTPUT_W( path)  {															\
+		   aricanli::general::Logger<wchar_t>::setLogOutput(path);							\
+		aricanli::general::Logger<wchar_t>::setLogFormat(); }
+#define LOG_SET_FILE_LIMIT_W( fileLimit)  {													\
+		   aricanli::general::Logger<wchar_t>::setFileLimit(fileLimit); }
 
-#define LOG_FATAL_W( ... )  { aricanli::general::Logger<wchar_t>::log( \
-		  aricanli::general::LogPriority::Fatal, __VA_ARGS__ );}
-#define LOG_ERROR_W( ... )   { aricanli::general::Logger<wchar_t>::log( \
-		  aricanli::general::LogPriority::Error, __VA_ARGS__ );}
-#define LOG_WARNING_W( ... ) { aricanli::general::Logger<wchar_t>::log( \
-		  aricanli::general::LogPriority::Warning, __VA_ARGS__ );}
-#define LOG_INFO_W( ...)     { aricanli::general::Logger<wchar_t>::log( \
-		  aricanli::general::LogPriority::Info, __VA_ARGS__ );}
-#define LOG_VERBOSE_W( ... ) { aricanli::general::Logger<wchar_t>::log( \
-		  aricanli::general::LogPriority::Verbose, __VA_ARGS__ );}
-#define LOG_DEBUG_W( ... )   { aricanli::general::Logger<wchar_t>::log( \
-		  aricanli::general::LogPriority::Debug, __VA_ARGS__ );}
-#define LOG_TRACE_W( ... )   { aricanli::general::Logger<wchar_t>::log( \
-		  aricanli::general::LogPriority::Trace, __VA_ARGS__ );}
+#define LOG_SET_PRIORITY_W(severity){						\
+		   aricanli::general::Logger<wchar_t>::setLogPriority( static_cast<aricanli::general::LogPriority>(severity));  }
+
+#define LOG_FATAL_W( ... )  { aricanli::general::Logger<wchar_t>::log(						\
+		  aricanli::general::LogPriority::Fatal, __VA_ARGS__ ); }
+#define LOG_ERROR_W( ... )   { aricanli::general::Logger<wchar_t>::log(						\
+		  aricanli::general::LogPriority::Error, __VA_ARGS__ ); }
+#define LOG_WARNING_W( ... ) { aricanli::general::Logger<wchar_t>::log(						\
+		  aricanli::general::LogPriority::Warning, __VA_ARGS__ ); }
+#define LOG_INFO_W( ...)     { aricanli::general::Logger<wchar_t>::log(						\
+		  aricanli::general::LogPriority::Info, __VA_ARGS__ ); }
+#define LOG_VERBOSE_W( ... ) { aricanli::general::Logger<wchar_t>::log(						\
+		  aricanli::general::LogPriority::Verbose, __VA_ARGS__ ); }
+#define LOG_DEBUG_W( ... )   { aricanli::general::Logger<wchar_t>::log(						\
+		  aricanli::general::LogPriority::Debug, __VA_ARGS__ ); }
+#define LOG_TRACE_W( ... )   { aricanli::general::Logger<wchar_t>::log(						\
+		  aricanli::general::LogPriority::Trace, __VA_ARGS__ ); }
 
 
 		// Intialize static data members

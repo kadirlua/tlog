@@ -308,11 +308,8 @@ namespace aricanli {
 					}
 					m_ofs << formattedStr.c_str();
 				}
-				if (m_logOutput == LogOutput::Console) {
-					SetConsoleOutputCP(CP_UTF8);
-					StreamWrapper<T>::tout.imbue(std::locale(std::locale::empty(), new std::codecvt<wchar_t, char, mbstate_t>("en_US.utf8")));
-					StreamWrapper<T>::tout << formattedStr.c_str();
-				}
+				if (m_logOutput == LogOutput::Console) 
+					StreamWrapper<T>::tout << formattedStr.c_str();		
 					
 			}
 

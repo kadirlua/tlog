@@ -357,57 +357,40 @@ namespace aricanli {
 
 		// Macro definitions for Logger::log() 
 #define LOG_QUIET()
-#define LOG_SET_FORMAT_C( formatter )  {													\
-		   aricanli::general::Logger<char>::setFormatter(formatter); }
-#define LOG_SET_OUTPUT_C( path)  {															\
-		   aricanli::general::Logger<char>::setLogOutput(path); 							\
-			aricanli::general::Logger<char>::setLogFormat(); }
-#define LOG_SET_FILE_LIMIT_C( fileLimit)  {													\
-		   aricanli::general::Logger<char>::setFileLimit(fileLimit); }
-#define LOG_SET_PRIORITY_C( severity )  {													\
-		 aricanli::general::Logger<char>::setLogPriority( static_cast<aricanli::general::LogPriority>(severity)); }
+#define LOG_SET_FORMAT_C( formatter )  aricanli::general::Logger<char>::setFormatter(formatter)
+#define LOG_SET_FILE_LIMIT_C( fileLimit) aricanli::general::Logger<char>::setFileLimit(fileLimit)
+#define LOG_SET_OUTPUT_C( path) \
+		   aricanli::general::Logger<char>::setLogOutput(path); \
+			aricanli::general::Logger<char>::setLogFormat()
+#define LOG_SET_PRIORITY_C( severity ) \
+		 aricanli::general::Logger<char>::setLogPriority( static_cast<aricanli::general::LogPriority>(severity))
 
-#define LOG_FATAL_C( ... )  {																\
-		   aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Fatal, __VA_ARGS__ ); }
-#define LOG_ERROR_C( line, file, ... )   {													\
-		aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Error, line, file, __VA_ARGS__ );	}
-#define LOG_WARNING_C( line,file,... ) { aricanli::general::Logger<char>::log(				\
-		  aricanli::general::LogPriority::Warning, line, file, __VA_ARGS__ ); }
-#define LOG_INFO_C( ...)     { aricanli::general::Logger<char>::log(						\
-		  aricanli::general::LogPriority::Info, __VA_ARGS__ ); }
-#define LOG_VERBOSE_C( ... ) { aricanli::general::Logger<char>::log(						\
-		  aricanli::general::LogPriority::Verbose, __VA_ARGS__ ); }
-#define LOG_DEBUG_C( ... )   { aricanli::general::Logger<char>::log(						\
-		  aricanli::general::LogPriority::Debug, __VA_ARGS__ ); }
-#define LOG_TRACE_C( ... )   { aricanli::general::Logger<char>::log(						\
-		  aricanli::general::LogPriority::Trace, __VA_ARGS__ ); }
+#define LOG_FATAL_C( ... )   aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Fatal, __VA_ARGS__ )
+#define LOG_ERROR_C(  ... )  aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Error, __VA_ARGS__ )
+#define LOG_WARNING_C( ... ) aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Warning, __VA_ARGS__ )
+#define LOG_INFO_C( ...)     aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Info, __VA_ARGS__ )
+#define LOG_VERBOSE_C( ... ) aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Verbose, __VA_ARGS__ )
+#define LOG_DEBUG_C( ... )   aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Debug, __VA_ARGS__ )
+#define LOG_TRACE_C( ... )   aricanli::general::Logger<char>::log(aricanli::general::LogPriority::Trace, __VA_ARGS__ )
 
 
-#define LOG_SET_FORMAT_W( formatter )  {													\
-		   aricanli::general::Logger<wchar_t>::setFormatter(formatter); }
-#define LOG_SET_OUTPUT_W( path)  {															\
-		   aricanli::general::Logger<wchar_t>::setLogOutput(path);							\
-		aricanli::general::Logger<wchar_t>::setLogFormat(); }
-#define LOG_SET_FILE_LIMIT_W( fileLimit)  {													\
-		   aricanli::general::Logger<wchar_t>::setFileLimit(fileLimit); }
+#define LOG_SET_FORMAT_W( formatter ) aricanli::general::Logger<wchar_t>::setFormatter(formatter)
+#define LOG_SET_OUTPUT_W( path) \
+		   aricanli::general::Logger<wchar_t>::setLogOutput(path); \
+		aricanli::general::Logger<wchar_t>::setLogFormat()
+#define LOG_SET_FILE_LIMIT_W( fileLimit) \
+		aricanli::general::Logger<wchar_t>::setFileLimit(fileLimit)
 
-#define LOG_SET_PRIORITY_W(severity){						\
-		   aricanli::general::Logger<wchar_t>::setLogPriority( static_cast<aricanli::general::LogPriority>(severity));  }
+#define LOG_SET_PRIORITY_W(severity)\
+	 aricanli::general::Logger<wchar_t>::setLogPriority( static_cast<aricanli::general::LogPriority>(severity))
 
-#define LOG_FATAL_W( ... )  { aricanli::general::Logger<wchar_t>::log(						\
-		  aricanli::general::LogPriority::Fatal, __VA_ARGS__ ); }
-#define LOG_ERROR_W( ... )   { aricanli::general::Logger<wchar_t>::log(						\
-		  aricanli::general::LogPriority::Error, __VA_ARGS__ ); }
-#define LOG_WARNING_W( ... ) { aricanli::general::Logger<wchar_t>::log(						\
-		  aricanli::general::LogPriority::Warning, __VA_ARGS__ ); }
-#define LOG_INFO_W( ...)     { aricanli::general::Logger<wchar_t>::log(						\
-		  aricanli::general::LogPriority::Info, __VA_ARGS__ ); }
-#define LOG_VERBOSE_W( ... ) { aricanli::general::Logger<wchar_t>::log(						\
-		  aricanli::general::LogPriority::Verbose, __VA_ARGS__ ); }
-#define LOG_DEBUG_W( ... )   { aricanli::general::Logger<wchar_t>::log(						\
-		  aricanli::general::LogPriority::Debug, __VA_ARGS__ ); }
-#define LOG_TRACE_W( ... )   { aricanli::general::Logger<wchar_t>::log(						\
-		  aricanli::general::LogPriority::Trace, __VA_ARGS__ ); }
+#define LOG_FATAL_W( ... )   aricanli::general::Logger<wchar_t>::log(aricanli::general::LogPriority::Fatal, __VA_ARGS__ )
+#define LOG_ERROR_W( ... )   aricanli::general::Logger<wchar_t>::log( aricanli::general::LogPriority::Error, __VA_ARGS__ )
+#define LOG_WARNING_W( ... ) aricanli::general::Logger<wchar_t>::log(aricanli::general::LogPriority::Warning, __VA_ARGS__ )
+#define LOG_INFO_W( ...)     aricanli::general::Logger<wchar_t>::log(aricanli::general::LogPriority::Info, __VA_ARGS__ )
+#define LOG_VERBOSE_W( ... ) aricanli::general::Logger<wchar_t>::log(aricanli::general::LogPriority::Verbose, __VA_ARGS__ )
+#define LOG_DEBUG_W( ... )   aricanli::general::Logger<wchar_t>::log(aricanli::general::LogPriority::Debug, __VA_ARGS__ )
+#define LOG_TRACE_W( ... )   aricanli::general::Logger<wchar_t>::log(aricanli::general::LogPriority::Trace, __VA_ARGS__ )
 
 
 		// Intialize static data members

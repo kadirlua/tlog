@@ -20,20 +20,6 @@
 #endif
 #endif
 
-
-/*
-* TODO:
-	Done :
-
-	Add :
-	
-	Test :
-	
-	Attention :
-	- Attention to keywords. virtual  noexcept , override etc.
-	- Try shared_lock for C++17 & C++20
-*/
-
 namespace aricanli {
 	namespace general {
 

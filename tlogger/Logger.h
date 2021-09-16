@@ -68,12 +68,12 @@ namespace aricanli {
 #if defined _MSC_VER
 		template <>
 		static void t_mkdir(std::string t_path) {
-			_mkdir(t_path.c_str());
+			(void)_mkdir(t_path.c_str());
 		}
 
 		template <>
 		static void t_mkdir(std::wstring t_path) {
-			_wmkdir(t_path.c_str());
+			(void)_wmkdir(t_path.c_str());
 		}
 #elif defined __GNUC__
 		template <>
